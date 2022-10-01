@@ -69,8 +69,8 @@ float octagonSDF(vec2 p, vec2 c, float r) {
 }
 
 Shape scene(float x, float y) {
-    Shape r1 = Shape(circleSDF(vec2(x, y), vec2(0.2, 0.8), 0.1), 1.0, 0.5);
-    Shape r2 = Shape(octagonSDF(vec2(x, y), vec2(0.7, 0.3), 0.2), 0.6, 0.5);
+    Shape r1 = Shape(circleSDF(vec2(x, y), vec2(0.4, 0.6), 0.1), 1.0, 0.5);
+    Shape r2 = Shape(octagonSDF(vec2(x, y), vec2(0.7, 0.3), 0.2), 1.0, 0.5);
     return unionOP(r1, r2);
 }
 
