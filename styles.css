@@ -1,0 +1,43 @@
+:root {
+    --c-black: rgb(0, 0, 0);
+    --c-white: rgb(255, 255, 255);
+}
+
+
+*, *::before, *::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: inherit;
+    font-weight: 400;
+}
+
+html {
+    font-family: sans-serif;
+    font-size: 62.5%;
+    scroll-behavior: smooth;
+}
+
+body {
+    box-sizing: border-box;
+    height: 100%;
+    width: 100%;
+    background-color: var(--c-black);
+    color: var(--c-white);
+}
+
+canvas {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    margin: auto;
+    max-width: 100%;
+    max-height: 100%;
+}
+
+@media screen and (max-width: 812px) {
+    html {
+        font-size: 50%;
+    }
+}
