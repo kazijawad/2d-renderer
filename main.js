@@ -4,7 +4,7 @@ import frag from './frag.glsl';
 
 const W = 1000;
 const H = 1000;
-const N = 256;
+const N = 32;
 
 const MAX_STEP = 10;
 const MAX_DISTANCE = 2;
@@ -44,17 +44,45 @@ function subtract(a, b) {
     return r;
 }
 
+function length(x, y) {
+    return Math.sqrt(x * x + y * y);
+}
+
+function clamp(x, min, max) {
+    return Math.min(Math.max(x, min), max);
+}
+
+function dot(a, b) {
+    return a.map((_, i) => a[i] * b[i]).reduce((m, n) => m + n);
+}
+
 function circleSDF(x, y, cx, cy, r) {
-    const ux = x - cx;
-    const uy = y - cy;
-    return Math.sqrt(ux * ux  + uy * uy) - r;
+    return length(x - cx, y - cy) - r;
+}
+
+function octagonSDF(x, y, cx, cy, r) {
+    const k = [-0.9238795325, 0.3826834323, 0.4142135623];
+    const p = [Math.abs(x - cx), Math.abs(y - cy)];
+
+    let kdotp = Math.min(dot([k[0], k[1]], p), 0);
+    p[0] -= 2.0 * kdotp * k[0];
+    p[1] -= 2.0 * kdotp * k[1];
+
+    kdotp = Math.min(dot([-k[0], k[1]], p), 0);
+    p[0] -= 2.0 * kdotp * -k[0];
+    p[1] -= 2.0 * kdotp * k[1];
+
+    p[0] -= clamp(p[0], -k[2] * r, k[2] * r);
+    p[1] -= r;
+
+    return length(...p) * Math.sign(p[1]);
 }
 
 function scene(x, y) {
-    const r1 = { sd: circleSDF(x, y, 0.4, 0.5, 0.2), emissive: 1 };
-    const r2 = { sd: circleSDF(x, y, 0.6, 0.5, 0.2), emissive: 0.8 };
+    const r1 = { sd: circleSDF(x, y, 0.2, 0.3, 0.1), emissive: 1 };
+    const r2 = { sd: octagonSDF(x, y, 0.6, 0.5, 0.2), emissive: 1 };
 
-    return subtract(r1, r2);
+    return union(r1, r2);
 }
 
 function render() {
