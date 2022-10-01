@@ -5,7 +5,7 @@
 
 #define W 1000
 #define H 1000
-#define N 128
+#define N 64
 
 #define MAX_STEP 10
 #define MAX_DISTANCE 2.0
@@ -13,13 +13,14 @@
 precision highp float;
 
 uniform vec2 resolution;
+uniform float uTime;
 
 out vec4 fragColor;
 
 struct Shape {
     float sd;
-    float emissive;
-    float reflectance;
+    vec3 emissive;
+    vec3 absorption;
 };
 
 Shape unionOP(Shape a, Shape b) {
@@ -68,27 +69,37 @@ float octagonSDF(vec2 p, vec2 c, float r) {
     return length(p) * sign(p.y);
 }
 
+vec3 beerLambert(vec3 a, float d) {
+    return exp(-a * d);
+}
+
+vec2 rotatePosition() {
+    float x = ((cos(uTime) + 1.0) * 0.25) + 0.25;
+    float y = ((sin(uTime) + 1.0) * 0.25) + 0.25;
+    return vec2(x, y);
+}
+
 Shape scene(float x, float y) {
-    Shape r1 = Shape(circleSDF(vec2(x, y), vec2(0.4, 0.6), 0.1), 1.0, 0.5);
-    Shape r2 = Shape(octagonSDF(vec2(x, y), vec2(0.7, 0.3), 0.2), 1.0, 0.5);
+    Shape r1 = Shape(circleSDF(vec2(x, y), rotatePosition(), 0.1), vec3(0.0, 0.5, 0.8), vec3(0.0));
+    Shape r2 = Shape(circleSDF(vec2(x, y), vec2(0.5, 0.5), 0.1), vec3(0.0, 0.5, 0.8), vec3(0.0));
     return unionOP(r1, r2);
 }
 
-float trace(vec2 p, vec2 incident) {
+vec3 trace(vec2 p, vec2 incident) {
     float t = 0.0;
     for (int i = 0; i < MAX_STEP && t < MAX_DISTANCE; i++) {
         vec2 q = p + incident * t;
         Shape r = scene(q.x, q.y);
         if (r.sd < EPSILON) {
-            return r.emissive;
+            return r.emissive * beerLambert(r.absorption, t);
         }
         t += r.sd;
     }
-    return 0.0;
+    return vec3(0.0);
 }
 
-float render(vec2 p) {
-    float sum = 0.0;
+vec3 render(vec2 p) {
+    vec3 sum = vec3(0.0);
     for (int i = 0; i < N; i++) {
         float a = TWO_PI * (float(i) + random(p)) / float(N);
         vec2 incident = vec2(cos(a), sin(a));
@@ -99,6 +110,6 @@ float render(vec2 p) {
 
 void main() {
     vec2 st = gl_FragCoord.xy / resolution;
-    float col = render(st);
-    fragColor = vec4(vec3(col), 1.0);
+    vec3 col = render(st);
+    fragColor = vec4(col, 1.0);
 }
