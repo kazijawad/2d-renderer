@@ -2,6 +2,7 @@
 
 #define TWO_PI 6.28318530718f
 #define EPSILON 1e-6f
+#define BIAS 1e-4f
 
 #define W 1000
 #define H 1000
@@ -9,6 +10,7 @@
 
 #define MAX_STEP 10
 #define MAX_DISTANCE 2.0
+#define MAX_DEPTH 5
 
 precision highp float;
 
@@ -19,6 +21,7 @@ out vec4 fragColor;
 struct Shape {
     float sd;
     float emissive;
+    float reflectance;
 };
 
 Shape unionOP(Shape a, Shape b) {
@@ -67,17 +70,32 @@ float octagonSDF(vec2 p, vec2 c, float r) {
     return length(p) * sign(p.y);
 }
 
-Shape scene(vec2 p) {
-    Shape r1 = Shape(circleSDF(p, vec2(0.2, 0.3), 0.1), 1.0);
-    Shape r2 = Shape(octagonSDF(p, vec2(0.6, 0.5), 0.2), 1.0);
+Shape scene(float x, float y) {
+    Shape r1 = Shape(circleSDF(vec2(x, y), vec2(0.2, 0.5), 0.1), 1.0, 0.5);
+    Shape r2 = Shape(octagonSDF(vec2(x, y), vec2(0.6, 0.5), 0.2), 1.0, 0.5);
     return unionOP(r1, r2);
 }
 
-float trace(vec2 p, float dx, float dy) {
+vec2 gradient(float x, float y) {
+    vec2 normal = vec2(0.0);
+    normal.x = (scene(x + EPSILON, y).sd - scene(x - EPSILON, y).sd) * (0.5 / EPSILON);
+    normal.y = (scene(x, y + EPSILON).sd - scene(x, y - EPSILON).sd) * (0.5 / EPSILON);
+    return normal;
+}
+
+float trace(vec2 p, vec2 incident, int depth) {
     float t = 0.0;
     for (int i = 0; i < MAX_STEP && t < MAX_DISTANCE; i++) {
-        Shape r = scene(vec2(p.x + dx * t, p.y + dy * t));
+        float x = p.x + incident.x * t;
+        float y = p.y + incident.y * t;
+        Shape r = scene(x, y);
         if (r.sd < EPSILON) {
+            float sum = r.emissive;
+            if (depth < MAX_DEPTH && r.reflectance > 0.0f) {
+                vec2 normal = gradient(x, y);
+                vec2 reflection = reflect(incident, normal);
+                sum += r.reflectance * trace(x + normal * BIAS, reflection, depth + 1);
+            }
             return r.emissive;
         }
         t += r.sd;
@@ -89,7 +107,8 @@ float sampleXY(vec2 p) {
     float sum = 0.0;
     for (int i = 0; i < N; i++) {
         float a = TWO_PI * (float(i) + random(p)) / float(N);
-        sum += trace(p, cos(a), sin(a));
+        vec2 incident = vec2(cos(a), sin(a));
+        sum += trace(p, incident, 0);
     }
     return sum / float(N);
 }
