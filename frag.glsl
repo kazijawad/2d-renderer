@@ -6,7 +6,7 @@
 
 #define W 512
 #define H 512
-#define N 64
+#define N 128
 
 #define MAX_STEP 64
 #define MAX_DISTANCE 5.0
@@ -20,6 +20,7 @@ out vec4 fragColor;
 struct Shape {
     float sd;
     float reflectivity;
+    float eta;
     vec3 emissive;
     vec3 absorption;
 };
@@ -81,30 +82,27 @@ vec3 beerLambert(vec3 a, float d) {
 
 Shape scene(vec2 p) {
     Shape r1 = Shape(
-        circleSDF(p, vec2(0.2, 0.7), 0.1),
+        circleSDF(p, vec2(0.1, 0.9), 0.2),
+        0.5,
         0.0,
-        vec3(1.0),
+        vec3(0.6, 0.6, 0.0),
         vec3(0.0)
     );
     Shape r2 = Shape(
-        boxSDF(p, vec2(0.4, 0.3), vec2(0.2, 0.2)),
-        0.9,
-        vec3(0.0),
+        circleSDF(p, vec2(0.8, 0.7), 0.1),
+        0.5,
+        0.0,
+        vec3(0.6, 0.6, 0.0),
         vec3(0.0)
     );
     Shape r3 = Shape(
-        boxSDF(p, vec2(0.65, 0.95), vec2(0.3, 0.01)),
-        0.9,
-        vec3(0.1, 0.1, 0.1),
-        vec3(0.0)
-    );
-    Shape r4 = Shape(
-        circleSDF(p, vec2(0.3, 0.5), 0.2),
+        boxSDF(p, vec2(0.5, 0.4), vec2(0.4, 0.02)),
         0.0,
+        1.5,
         vec3(0.0),
-        vec3(0.0)
+        vec3(0.6, 0.6, 0.0)
     );
-    return unionOP(unionOP(r1, r3), subtractOP(r2, r4));
+    return unionOP(unionOP(r1, r2), r3);
 }
 
 vec2 gradient(vec2 q) {
@@ -114,7 +112,7 @@ vec2 gradient(vec2 q) {
     return grad;
 }
 
-vec3 traceReflection(vec2 p, vec2 incident) {
+vec3 traceRef(vec2 p, vec2 incident) {
     float t = 0.0;
     for (int i = 0; i < MAX_STEP && t < MAX_DISTANCE; i++) {
         vec2 q = p + incident * t;
@@ -128,20 +126,37 @@ vec3 traceReflection(vec2 p, vec2 incident) {
 }
 
 vec3 trace(vec2 p, vec2 incident) {
-    float t = 0.0;
+    float t = 1e-3;
+    float multiplier = sign(scene(p).sd);
     for (int i = 0; i < MAX_STEP && t < MAX_DISTANCE; i++) {
         vec2 q = p + incident * t;
         Shape r = scene(q);
-        if (r.sd < EPSILON) {
+        if (r.sd * multiplier < EPSILON) {
             vec3 sum = r.emissive;
-            if (r.reflectivity > 0.0) {
+            if (r.reflectivity > 0.0 || r.eta > 0.0) {
                 vec2 normal = gradient(q);
-                vec2 reflection = reflect(incident, normal);
-                sum += r.reflectivity * traceReflection(q + normal * BIAS, reflection);
+                normal *= multiplier;
+                if (r.eta > 0.0) {
+                    vec2 refraction;
+                    if (multiplier < 0.0) {
+                        refraction = refract(incident, normal, r.eta);
+                    } else {
+                        refraction = refract(incident, normal, 1.0 / r.eta);
+                    }
+                    if (refraction.x > 0.0 && refraction.y > 0.0) {
+                        sum += (1.0 - r.reflectivity) * traceRef(q - normal + BIAS, refraction);
+                    } else {
+                        r.reflectivity = 1.0;
+                    }
+                }
+                if (r.reflectivity > 0.0) {
+                    vec2 reflection = reflect(incident, normal);
+                    sum += r.reflectivity * traceRef(q + normal * BIAS, reflection);
+                } 
             }
             return sum * beerLambert(r.absorption, t);
         }
-        t += r.sd;
+        t += r.sd * multiplier;
     }
     return vec3(0.0);
 }
