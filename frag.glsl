@@ -3,11 +3,11 @@
 #define TWO_PI 6.28318530718f
 #define EPSILON 1e-6f
 
-#define W 1000
-#define H 1000
-#define N 64
+#define W 256
+#define H 256
+#define N 32
 
-#define MAX_STEP 10
+#define MAX_STEP 16
 #define MAX_DISTANCE 2.0
 
 precision highp float;
@@ -52,12 +52,17 @@ Shape subtractOP(Shape a, Shape b) {
     return r;
 }
 
-float random(vec2 st) {
-    return fract(sin(dot(st.xy, vec2(12.9898,78.233))) * 43758.5453123);
+float random(vec2 p) {
+    return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453123);
 }
 
 float circleSDF(vec2 p, vec2 c, float r) {
     return length(p - c) - r;
+}
+
+float boxSDF(vec2 p, vec2 c, vec2 b) {
+    vec2 d = abs(p - c) - b;
+    return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0);
 }
 
 float octagonSDF(vec2 p, vec2 c, float r) {
@@ -79,17 +84,35 @@ vec2 rotatePosition() {
     return vec2(x, y);
 }
 
-Shape scene(float x, float y) {
-    Shape r1 = Shape(circleSDF(vec2(x, y), rotatePosition(), 0.1), vec3(0.0, 0.5, 0.8), vec3(0.0));
-    Shape r2 = Shape(circleSDF(vec2(x, y), vec2(0.5, 0.5), 0.1), vec3(0.0, 0.5, 0.8), vec3(0.0));
-    return unionOP(r1, r2);
+Shape scene(vec2 p) {
+    Shape r1 = Shape(
+        circleSDF(p, rotatePosition(), 0.05),
+        vec3(0.0, 0.5, 0.8),
+        vec3(0.0)
+    );
+    Shape r2 = Shape(
+        octagonSDF(p, vec2(0.5, 0.5), 0.1),
+        vec3(0.8, 0.8, 0.8),
+        vec3(0.0)
+    );
+    Shape r3 = Shape(
+        boxSDF(p, vec2(0.5, 0.95), vec2(0.3, 0.01)),
+        vec3(0.1, 0.1, 0.1),
+        vec3(0.0)
+    );
+    Shape r4 = Shape(
+        boxSDF(p, vec2(0.5, 0.05), vec2(0.3, 0.01)),
+        vec3(0.1, 0.1, 0.1),
+        vec3(0.0)
+    );
+    return unionOP(r1, unionOP(r2, unionOP(r3, r4)));
 }
 
 vec3 trace(vec2 p, vec2 incident) {
     float t = 0.0;
     for (int i = 0; i < MAX_STEP && t < MAX_DISTANCE; i++) {
         vec2 q = p + incident * t;
-        Shape r = scene(q.x, q.y);
+        Shape r = scene(q);
         if (r.sd < EPSILON) {
             return r.emissive * beerLambert(r.absorption, t);
         }
@@ -109,7 +132,7 @@ vec3 render(vec2 p) {
 }
 
 void main() {
-    vec2 st = gl_FragCoord.xy / resolution;
-    vec3 col = render(st);
-    fragColor = vec4(col, 1.0);
+    vec2 uv = gl_FragCoord.xy / resolution;
+    vec3 c = render(uv);
+    fragColor = vec4(c, 1.0);
 }

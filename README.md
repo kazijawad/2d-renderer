@@ -1,7 +1,11 @@
-# 2D Ray Tracer
+# 2D Renderer
 
 ![CSG Intersection Image](screenshots/csg.png)
 
+## Features
+
+- CSG Operations
+- Light Absorption
 
 ## References
 
