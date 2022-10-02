@@ -58,6 +58,10 @@ float random(vec2 p) {
     return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453123);
 }
 
+float planeSDF(vec2 p, vec2 c, vec2 n) {
+    return dot(p - c, n);
+}
+
 float circleSDF(vec2 p, vec2 c, float r) {
     return length(p - c) - r;
 }
@@ -82,22 +86,22 @@ vec3 beerLambert(vec3 a, float d) {
 
 Shape scene(vec2 p) {
     Shape r1 = Shape(
-        circleSDF(p, vec2(0.1, 0.9), 0.2),
+        circleSDF(p, vec2(0.3, 0.65), 0.2),
         0.5,
         0.0,
         vec3(0.6, 0.6, 0.0),
         vec3(0.0)
     );
     Shape r2 = Shape(
-        circleSDF(p, vec2(0.8, 0.7), 0.1),
+        circleSDF(p, vec2(0.75, 0.7), 0.1),
         0.5,
         0.0,
         vec3(0.6, 0.6, 0.0),
         vec3(0.0)
     );
     Shape r3 = Shape(
-        boxSDF(p, vec2(0.5, 0.4), vec2(0.4, 0.02)),
-        0.0,
+        boxSDF(p, vec2(0.5, 0.35), vec2(0.4, 0.05)),
+        0.5,
         1.5,
         vec3(0.0),
         vec3(0.6, 0.6, 0.0)
