@@ -2,23 +2,24 @@
 
 #define TWO_PI 6.28318530718f
 #define EPSILON 1e-6f
+#define BIAS 1e-4f
 
-#define W 256
-#define H 256
-#define N 32
+#define W 512
+#define H 512
+#define N 64
 
-#define MAX_STEP 16
-#define MAX_DISTANCE 2.0
+#define MAX_STEP 64
+#define MAX_DISTANCE 5.0
 
 precision highp float;
 
 uniform vec2 resolution;
-uniform float uTime;
 
 out vec4 fragColor;
 
 struct Shape {
     float sd;
+    float reflectivity;
     vec3 emissive;
     vec3 absorption;
 };
@@ -78,34 +79,52 @@ vec3 beerLambert(vec3 a, float d) {
     return exp(-a * d);
 }
 
-vec2 rotatePosition() {
-    float x = ((cos(uTime) + 1.0) * 0.25) + 0.25;
-    float y = ((sin(uTime) + 1.0) * 0.25) + 0.25;
-    return vec2(x, y);
-}
-
 Shape scene(vec2 p) {
     Shape r1 = Shape(
-        circleSDF(p, rotatePosition(), 0.05),
-        vec3(0.0, 0.5, 0.8),
+        circleSDF(p, vec2(0.2, 0.7), 0.1),
+        0.0,
+        vec3(1.0),
         vec3(0.0)
     );
     Shape r2 = Shape(
-        octagonSDF(p, vec2(0.5, 0.5), 0.1),
-        vec3(0.8, 0.8, 0.8),
+        boxSDF(p, vec2(0.4, 0.3), vec2(0.2, 0.2)),
+        0.9,
+        vec3(0.0),
         vec3(0.0)
     );
     Shape r3 = Shape(
-        boxSDF(p, vec2(0.5, 0.95), vec2(0.3, 0.01)),
+        boxSDF(p, vec2(0.65, 0.95), vec2(0.3, 0.01)),
+        0.9,
         vec3(0.1, 0.1, 0.1),
         vec3(0.0)
     );
     Shape r4 = Shape(
-        boxSDF(p, vec2(0.5, 0.05), vec2(0.3, 0.01)),
-        vec3(0.1, 0.1, 0.1),
+        circleSDF(p, vec2(0.3, 0.5), 0.2),
+        0.0,
+        vec3(0.0),
         vec3(0.0)
     );
-    return unionOP(r1, unionOP(r2, unionOP(r3, r4)));
+    return unionOP(unionOP(r1, r3), subtractOP(r2, r4));
+}
+
+vec2 gradient(vec2 q) {
+    vec2 grad = vec2(0.0);
+    grad.x = (scene(vec2(q.x + EPSILON, q.y)).sd - scene(vec2(q.x - EPSILON, q.y)).sd) * (0.5 / EPSILON);
+    grad.y = (scene(vec2(q.x, q.y + EPSILON)).sd - scene(vec2(q.x, q.y - EPSILON)).sd) * (0.5 / EPSILON);
+    return grad;
+}
+
+vec3 traceReflection(vec2 p, vec2 incident) {
+    float t = 0.0;
+    for (int i = 0; i < MAX_STEP && t < MAX_DISTANCE; i++) {
+        vec2 q = p + incident * t;
+        Shape r = scene(q);
+        if (r.sd < EPSILON) {
+            return r.emissive * beerLambert(r.absorption, t);
+        }
+        t += r.sd;
+    }
+    return vec3(0.0);
 }
 
 vec3 trace(vec2 p, vec2 incident) {
@@ -114,7 +133,13 @@ vec3 trace(vec2 p, vec2 incident) {
         vec2 q = p + incident * t;
         Shape r = scene(q);
         if (r.sd < EPSILON) {
-            return r.emissive * beerLambert(r.absorption, t);
+            vec3 sum = r.emissive;
+            if (r.reflectivity > 0.0) {
+                vec2 normal = gradient(q);
+                vec2 reflection = reflect(incident, normal);
+                sum += r.reflectivity * traceReflection(q + normal * BIAS, reflection);
+            }
+            return sum * beerLambert(r.absorption, t);
         }
         t += r.sd;
     }
