@@ -86,25 +86,25 @@ vec3 beerLambert(vec3 a, float d) {
 
 Shape scene(vec2 p) {
     Shape r1 = Shape(
-        circleSDF(p, vec2(0.3, 0.65), 0.2),
+        circleSDF(p, vec2(0.3, 0.75), 0.2),
         0.5,
         0.0,
-        vec3(0.6, 0.6, 0.0),
+        vec3(1.0),
         vec3(0.0)
     );
     Shape r2 = Shape(
         circleSDF(p, vec2(0.75, 0.7), 0.1),
         0.5,
         0.0,
-        vec3(0.6, 0.6, 0.0),
+        vec3(1.0),
         vec3(0.0)
     );
     Shape r3 = Shape(
-        boxSDF(p, vec2(0.5, 0.35), vec2(0.4, 0.05)),
-        0.5,
-        1.5,
+        boxSDF(p, vec2(0.5, 0.3), vec2(0.4, 0.2)),
+        0.0,
+        1.0,
         vec3(0.0),
-        vec3(0.6, 0.6, 0.0)
+        vec3(1.0)
     );
     return unionOP(unionOP(r1, r2), r3);
 }
@@ -148,7 +148,7 @@ vec3 trace(vec2 p, vec2 incident) {
                         refraction = refract(incident, normal, 1.0 / r.eta);
                     }
                     if (refraction.x > 0.0 && refraction.y > 0.0) {
-                        sum += (1.0 - r.reflectivity) * traceRef(q - normal + BIAS, refraction);
+                        sum += (1.0 - r.reflectivity) * traceRef(q - normal * BIAS, refraction);
                     } else {
                         r.reflectivity = 1.0;
                     }
@@ -156,7 +156,7 @@ vec3 trace(vec2 p, vec2 incident) {
                 if (r.reflectivity > 0.0) {
                     vec2 reflection = reflect(incident, normal);
                     sum += r.reflectivity * traceRef(q + normal * BIAS, reflection);
-                } 
+                }
             }
             return sum * beerLambert(r.absorption, t);
         }
