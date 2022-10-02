@@ -86,27 +86,27 @@ vec3 beerLambert(vec3 a, float d) {
 
 Shape scene(vec2 p) {
     Shape r1 = Shape(
-        circleSDF(p, vec2(0.5, 0.8), 0.1),
+        circleSDF(p, vec2(0.5, 0.7), 0.2),
+        0.3,
         0.0,
-        0.0,
-        vec3(1.0),
-        vec3(1.0, 0.0, 1.0)
+        vec3(0.6, 0.4, 0.3),
+        vec3(0.0)
     );
     Shape r2 = Shape(
-        circleSDF(p, vec2(0.5, 0.2), 0.1),
-        0.0,
-        0.0,
-        vec3(1.0),
-        vec3(1.0, 0.0, 1.0)
-    );
-    Shape r3 = Shape(
-        boxSDF(p, vec2(0.5, 0.5), vec2(0.4, 0.1)),
+        boxSDF(p, vec2(0.5, 0.3), vec2(0.4, 0.2)),
         0.0,
         1.0,
         vec3(0.0),
-        vec3(1.0, 0.0, 1.0)
+        vec3(0.6, 0.4, 0.3)
     );
-    return unionOP(unionOP(r1, r2), r3);
+    Shape r3 = Shape(
+        circleSDF(p, vec2(0.5, 0.5), 0.3),
+        0.0,
+        0.0,
+        vec3(0.0),
+        vec3(0.0)
+    );
+    return unionOP(r1, subtractOP(r2, r3));
 }
 
 vec2 gradient(vec2 q) {
