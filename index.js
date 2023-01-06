@@ -43,7 +43,5 @@ function handleKey(event) {
 
 function render() {
     const program = new Program(fragment)
-    program.setUniform('uMaxStep', 64)
-    program.setUniform('uMaxDistance', 5)
     renderer.render(program)
 }
