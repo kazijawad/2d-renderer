@@ -1,4 +1,6 @@
-# 2D Renderer
+# WebGL Light Shapes
+
+An experimental 2D vector renderer using SDF ray marching for lighting.
 
 <p float="left">
   <img src="screenshots/render_01.png" alt="Box with 2 Circles" width="400" />
